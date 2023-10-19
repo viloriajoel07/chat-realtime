@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Realtime</title>
+    <script type="module">
+      import { io } from "https://cdn.socket.io/4.3.2/socket.io.esm.min.js";
+
+      const form = document.getElementById("form");
+      const input = document.getElementById("input");
+      const message = document.getElementById("message");
+
+      const getUserName = async () => {
+        const username = localStorage.getItem("username");
+        if (username) {
+          console.log(`User existed ${username}`);
+        }
+
+        const res = await fetch(
+          "https://random-data-api.com/api/users/random_user"
+        );
+        const { username: randomUsername } = await res.json();
+
+        localStorage.setItem("username", randomUsername);
+        console.log(randomUsername);
+        return randomUsername;
+      };
+
+      const socket = io({
+        auth: {
+          username: await getUserName(),
+          serverOffset: 0,
+        },
+      });
+
+      socket.on("chat message", (msg, serverOffset, username) => {
+        console.log(msg, serverOffset, username);
+        const item = `<li>
+              <p>${msg}</p>
+              <small>${username}</small>
+              </li>`;
+        message.insertAdjacentHTML("beforeend", item);
+        socket.auth.serverOffset = serverOffset;
+        message.scrollTop = message.scrollHeight;
+      });
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        if (input.value) {
+          socket.emit("chat message", input.value);
+          input.value = "";
+        }
+      });
+    </script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #chat {
+        max-width: 45rem;
+        width: 100%;
+        height: 80vh;
+        border: solid white 1px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+      #message {
+        flex-grow: 1;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        overflow-y: scroll;
+        scroll-behavior: smooth;
+        height: 100%;
+        padding-bottom: 48px;
+      }
+      #message li {
+        padding: 0.5rem 1rem;
+      }
+      #message > li:nth-child(odd) {
+        background-color: #000;
+      }
+      #chat form {
+        width: 100%;
+        display: flex;
+        position: absolute;
+        padding: 0px 10px;
+        bottom: 4px;
+        gap: 10px;
+      }
+
+      #chat form input {
+        flex: grow;
+        border: none;
+        padding: 4px 15px;
+        width: 100%;
+        border-radius: 15px;
+        outline: none;
+      }
+      #chat form button {
+        border: none;
+        padding: 10px 20px;
+        background: #00c3ff;
+        border-radius: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="chat">
+      <ul id="message"></ul>
+      <form id="form">
+        <input
+          type="text"
+          name="input"
+          id="input"
+          placeholder="type a message"
+          autocomplete="off"
+        />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </body>
+</html>
